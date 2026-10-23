@@ -1,69 +1,121 @@
 # Gemini Usage Monitor
 
-A dependency-free Chrome Manifest V3 extension that adds a compact usage card below Gemini’s welcome heading and above the prompt. Includes current and weekly progress, second-by-second reset countdowns, automatic refresh, and manual refresh. The card follows the input box’s width, surface color, and font, and resizes with the composer.
+A lightweight Chrome extension that displays Gemini usage limits and live reset countdowns directly above the prompt.
 
-## Install
+See your **current usage** and **weekly limit** without leaving Gemini’s start page. The card blends with Gemini’s theme and follows the input box’s width, surface color, and typography.
 
-1. Open `chrome://extensions` in the browser profile where you use Gemini (or `brave://extensions` in Brave).
-2. Enable **Developer mode**.
-3. Click **Load unpacked** and select this folder, `/Users/shakib/Projects/gemini-usage`.
-4. Reload an existing Gemini tab, then open https://gemini.google.com/app while signed in.
-5. The card appears on the welcome screen. Its **Usage** link opens the account’s usage page; **↻** refreshes the card.
+Built with vanilla JavaScript and Chrome Manifest V3. No dependencies, build tools, backend, or API keys required.
 
-After changing files, click the extension’s reload button and reload Gemini. No package installation, build, API key, or backend is required.
+## Features
 
-## Data-source investigation
+- **Usage at a glance:** current and weekly percentages with progress bars.
+- **Live reset countdowns:** time remaining for each usage window, updated every second.
+- **Native appearance:** light and dark theme support, rounded corners, and responsive spacing.
+- **Matching width:** follows the Gemini input box as it resizes.
+- **Automatic refresh:** checks usage every five minutes while the welcome page is visible.
+- **Manual refresh:** a small refresh button with a shared cooldown.
+- **Local cache:** keeps the last successful values available when a refresh fails.
+- **SPA support:** handles navigation and DOM replacements without duplicate cards.
+- **Minimal permissions:** uses only the `storage` API permission and a content script scoped to Gemini.
 
-Inspected the authenticated `/usage` page on 23 October 2026. Its DOM includes a `script[type="application/json"][data-bg3-relay-preload]` with this structured envelope:
+## Installation
 
-```text
-events[]
-  id: "usage:0"
-  kind: "chunk"
-  chunk: JSON-encoded array of GraphQL payloads
-    data.viewer.rpcs.getUsageInfo.pools[]
-      poolType: GXU_FIVE_HOURLY | GXU_WEEKLY
-      percentageUsed: number from 0 to 1
-      gxu.windowRefreshesAt: ISO timestamp
+### Download
+
+1. [Download the repository ZIP](https://github.com/Mo-Shakib/gemini-usage-monitor/archive/HEAD.zip) and extract it.
+2. Open `chrome://extensions` in the browser profile you use for Gemini. In Brave, use `brave://extensions`.
+3. Enable **Developer mode**.
+4. Click **Load unpacked** and select the extracted folder containing `manifest.json`.
+5. Reload Gemini and open the [Gemini start page](https://gemini.google.com/app) while signed in.
+
+### Clone
+
+Alternatively, clone the repository and load the resulting folder using the steps above:
+
+```sh
+git clone https://github.com/Mo-Shakib/gemini-usage-monitor.git
+cd gemini-usage-monitor
 ```
 
-The observed weekly fraction was `0.226871`, matching the page’s displayed **23%**; the current fraction was `0`. The JSON supplies exact reset instants rather than ambiguous labels such as “2:17”. Displayed percentages are rounded; bars retain precision. No account credentials or complete page captures are stored in this repository.
+The extension uses your existing Gemini browser session. There is no separate sign-in or setup.
 
-Inspected public JavaScript assets referenced by that page:
+## Usage
 
-- [Usage route module](https://www.gstatic.com/bg3/boq-bard-web/islands/assets/usage-805wZsY0.js) loads a persisted `UsagePageQuery` through Relay.
-- [Usage query module](https://www.gstatic.com/bg3/boq-bard-web/islands/assets/UsagePageLoading-C8J7KGbN.js) defines the query metadata.
-- [Relay transport](https://www.gstatic.com/bg3/boq-bard-web/islands/assets/environment-Qgbwz7FM.js) builds a private GraphQL `executeQuery` URL from bootstrap configuration and uses `query_signature` and serialized variables for GET queries. Its POST path also handles XSRF tokens.
+The usage card appears below the welcome heading and above the prompt on Gemini’s start page.
 
-These are observed internal implementation details, not stable public API contracts. The extension therefore requests the known `/usage` page using the existing same-origin session and extracts **only its structured Relay JSON**. It does not scrape visible text, execute scripts, guess an RPC endpoint, or read token-bearing bootstrap globals. This uses the structured query result while avoiding a hardcoded persisted query signature and private transport configuration.
+- **Current usage** and **Weekly limit** show the percentage used in each window.
+- The countdown below each progress bar shows the time remaining until its reset.
+- Click **↻** to refresh manually, or **Usage** to open Gemini’s usage page.
 
-**Verification boundary:** the authenticated page’s structured preload and welcome-page anchors were inspected directly. A raw authenticated `/usage` response and a fully installed extension were not tested end to end in this environment. The implementation expects the observed preload to be included in the fetched response; if it is absent, the card explicitly shows an unavailable state. It never substitutes fabricated percentages. Gemini variants that only populate this data after JavaScript execution need a separately verified adapter.
+The card stays hidden inside conversations. Automatic network refreshes pause while the tab is hidden or the welcome page is inactive. Returning to the start page checks whether the saved values need refreshing.
 
-## Behavior and privacy
+After updating the extension files, reload the extension on the extensions page, then reload Gemini.
 
-- Requests `/usage` at most once per five minutes during normal use, while a welcome tab is visible. Hidden tabs and conversation pages pause network activity; returning to the welcome screen checks freshness.
-- A service-worker lease coordinates tabs for the same account. Requests time out after 20 seconds; leases expire after 25 seconds. Manual requests have a 15-second shared cooldown; failures have a one-minute minimum cooldown and normally retry after five minutes.
-- Retains the latest successful data locally. Failed refreshes leave saved values visible and label them as saved. A passed reset reads “Reset due · awaiting update”; the extension never assumes usage has fallen to zero.
-- Cache keys hash the account link’s label and account selector locally, so recognized accounts remain separate. The original label is never sent to the worker or saved. If that link cannot be identified, a random page-scoped partition prevents reuse of another page’s cache. This can reduce cache sharing until the native account link appears.
-- Stores only an opaque key, usage percentages, reset timestamps, and fetch time; up to eight recent account caches. Values older than a day are ignored. Chrome’s local extension storage is used, never sync storage.
-- Does not read cookies, authentication tokens, prompt text, or chat history. Browser-managed cookies accompany the same-origin fetch without being accessible to this code. Raw HTML is transient and never logged, messaged, or cached.
-- Only the `storage` API permission is needed. The content script is restricted to `https://gemini.google.com/*` so it can handle SPA transitions from other Gemini routes. No `cookies`, `tabs`, `scripting`, `webRequest`, debugger, broad host permissions, or external services.
-- Uses Gemini theme classes and available color tokens, local font fallbacks, and an inline document-flow card. MutationObserver restores the card after SPA DOM replacements, with one instance. It deliberately stays hidden when the welcome heading or prompt anchor cannot be found.
+## How it works
 
-Chrome documents the content script’s same-origin request behavior in [Cross-origin network requests](https://developer.chrome.com/docs/extensions/develop/concepts/network-requests).
+The content script requests [Gemini’s usage page](https://gemini.google.com/usage) with the existing same-origin browser session. It reads the page’s structured Relay JSON rather than scraping the displayed percentages or guessing an API endpoint.
 
-## Files
+The verified usage fields are:
 
-- `manifest.json`: MV3 registration and permissions.
-- `content.js`: authenticated request, structured parsing, placement, theme, countdowns, and refresh scheduling.
-- `background.js`: validated cache and shared refresh leases.
-- `styles.css`: scoped responsive card styling.
-- `tests/usage.test.cjs`: dependency-free parser, countdown, cache, and lease tests.
-- `tests/preview.html`: browser fixture with explicitly simulated data and extension messaging. Never used by the extension itself.
+```text
+data.viewer.rpcs.getUsageInfo.pools[]
+  poolType: GXU_FIVE_HOURLY | GXU_WEEKLY
+  percentageUsed: fraction between 0 and 1
+  gxu.windowRefreshesAt: ISO reset timestamp
+```
 
-## Checks
+Percentages are rounded for display; progress bars retain the underlying precision. Reset timestamps drive the live countdowns. When a countdown expires, the card displays **Reset due · awaiting update** until fresh data arrives.
 
-With Node.js installed, run:
+A background service worker coordinates refreshes across tabs and caches normalized usage data. Requests time out after 20 seconds. Manual refreshes have a 15-second shared cooldown, and failures impose a minimum one-minute cooldown.
+
+<details>
+<summary>Data-source investigation</summary>
+
+The authenticated usage page was inspected on 23 October 2026. Its DOM contained a `script[type="application/json"][data-bg3-relay-preload]` with an `events` array. A `usage:0` event contained a JSON-encoded GraphQL payload in its `chunk` field.
+
+The observed weekly fraction, `0.226871`, matched the page’s displayed **23%**. Both usage pools included exact reset timestamps.
+
+Public JavaScript assets referenced by that page confirmed the use of a persisted Relay query:
+
+- [Usage route module](https://www.gstatic.com/bg3/boq-bard-web/islands/assets/usage-805wZsY0.js)
+- [Usage query metadata](https://www.gstatic.com/bg3/boq-bard-web/islands/assets/UsagePageLoading-C8J7KGbN.js)
+- [Relay transport implementation](https://www.gstatic.com/bg3/boq-bard-web/islands/assets/environment-Qgbwz7FM.js)
+
+The private GraphQL transport derives its endpoint from bootstrap configuration. The extension instead retrieves the known usage page and extracts its structured preload, avoiding hardcoded query signatures and token handling.
+
+These assets and data formats are internal Google implementation details and may change. The parser requires the structured preload to be present in the fetched response; it reports an unavailable state if the expected data is missing.
+
+</details>
+
+## Privacy and permissions
+
+- **No analytics or external backend.** The extension’s requests go only to Gemini’s usage page.
+- **No token handling.** It does not read, expose, or persist authentication tokens or cookies. The browser attaches the existing session cookies to the request.
+- **No prompt or chat collection.** It uses the prompt element only as a layout anchor; it does not read your prompt text or conversation history.
+- **Local storage only.** Cached values include percentages, reset timestamps, fetch time, and an opaque account key. They are never synced through Chrome storage.
+- **Separate account caches.** The account link’s label and account selector are hashed locally to partition cached data. The original label is not saved or sent to the background worker. If the account link is unavailable, a random page-scoped partition is used.
+- **Limited cache retention.** Up to eight account caches are retained; cached values older than a day are ignored. Raw page responses are never persisted or logged.
+
+The manifest requests only `storage`. Its content script runs on `https://gemini.google.com/*` to support SPA navigation. It does not request `cookies`, `tabs`, `scripting`, `webRequest`, or debugger permissions.
+
+For the browser behavior behind these requests, see Chrome’s [content-script network request documentation](https://developer.chrome.com/docs/extensions/develop/concepts/network-requests).
+
+## Development
+
+The extension runs directly from source:
+
+```text
+manifest.json          Extension registration and permissions
+content.js             Usage parsing, layout, countdowns, and scheduling
+background.js          Cache validation and shared refresh leases
+styles.css             Scoped card styling
+tests/usage.test.cjs   Parser, countdown, cache, and lease tests
+tests/preview.html     Browser fixture with simulated data
+```
+
+### Run checks
+
+With Node.js installed:
 
 ```sh
 node --check content.js
@@ -71,6 +123,40 @@ node --check background.js
 node --test tests/usage.test.cjs
 ```
 
-For a visual fixture, serve this folder with `python3 -m http.server 8765` and visit `http://localhost:8765/tests/preview.html`. Reopen that fixture URL after reloading: it changes its path to `/app` to exercise route handling. Fixture checks covered progress values, single mounting after repeated mutations, conversation navigation away/back without an extra request, light/dark switching, retained cache on network failure, and a 390px layout without horizontal overflow.
+### Preview the interface
 
-After installing, verify both percentages and reset countdowns against `/usage`, click refresh, switch Gemini themes, open a conversation and return to a new chat. If the card says unavailable, open the Usage link to check sign-in and feature availability. If the page itself works, Google may have changed its preload schema; update the adapter from newly observed evidence rather than guessing endpoints. Remove the extension to clear its local storage.
+With Python installed:
+
+```sh
+python3 -m http.server 8765
+```
+
+Open `http://localhost:8765/tests/preview.html`. The fixture uses sample data and simulated extension messaging; it does not access your Gemini session. It changes its URL to `/app` to exercise route handling, so reopen the original fixture URL after a reload.
+
+For an installed-extension check, compare the percentages and countdowns with Gemini’s usage page, switch themes, resize the input area, and navigate into a conversation and back to the start page.
+
+## Troubleshooting
+
+**The card does not appear**
+
+Reload the extension and Gemini. Open a new chat: the card requires the welcome heading and prompt input to be present.
+
+**Usage is unavailable**
+
+Open Gemini’s usage page and confirm that you are signed in and usage information is available for your account. If the page works but the extension cannot retrieve data, Google may have changed the structured preload format.
+
+**The card shows saved usage**
+
+The latest refresh failed. Cached values remain visible, and the extension will retry automatically. You can also refresh manually once the cooldown ends.
+
+**The countdown has reached zero**
+
+Wait for the next successful refresh. The extension does not assume usage has reset until Gemini reports fresh values.
+
+## Contributing
+
+Bug reports and focused pull requests are welcome at [Mo-Shakib/gemini-usage-monitor](https://github.com/Mo-Shakib/gemini-usage-monitor). When reporting a parsing issue, include the visible error and browser version. Do not share cookies, tokens, account details, or unredacted network captures.
+
+---
+
+An independent project, unaffiliated with Google. Gemini is a trademark of Google LLC.
