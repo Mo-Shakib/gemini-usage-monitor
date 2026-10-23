@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Gemini Usage Monitor · test fixture</title><link rel="stylesheet" href="../styles.css"><style>
+body{margin:0;background:#101010;color:#e3e3e3;font:16px Arial,sans-serif}main{max-width:840px;margin:180px auto 0;padding:24px}h1{font-size:34px;font-weight:400;text-align:center;margin:0} .prompt{max-width:660px;margin:20px auto;background:#222;border-radius:32px;padding:24px;color:#aaa} [contenteditable]{outline:none}footer{text-align:center;font-size:12px;color:#888;margin-top:50px}
+</style></head><body class="dark-theme"><main><div class="content-wrapper"><h1 data-test-id="message">Where should we start?</h1></div><div class="prompt"><div role="textbox" contenteditable="true" aria-label="Enter a prompt for Gemini">Ask Gemini</div></div><footer>Local test fixture · sample data</footer></main><script>
+// Browser-only harness. No Gemini session or private data is used.
+history.replaceState({}, '', '/app');
+window.fixtureRequests = 0;
+const sample={fetchedAt:Date.now(),current:{percent:0,resetAt:new Date(Date.now()+18000000).toISOString()},weekly:{percent:22.6871,resetAt:new Date(Date.now()+4*86400000).toISOString()}};
+window.chrome={runtime:{sendMessage:async m=>m.type==='read'?{}:m.type==='claim'?{ticket:'test'}:{ok:true}},storage:{onChanged:{addListener(){}}}};
+window.fetch=async()=>{fixtureRequests++;return {ok:true,text:async()=>`<script type="application/json" data-bg3-relay-preload>${JSON.stringify({events:[{id:'usage:0',kind:'chunk',chunk:JSON.stringify([{data:{viewer:{rpcs:{getUsageInfo:{pools:[{poolType:'GXU_FIVE_HOURLY',percentageUsed:sample.current.percent/100,gxu:{windowRefreshesAt:sample.current.resetAt}},{poolType:'GXU_WEEKLY',percentageUsed:sample.weekly.percent/100,gxu:{windowRefreshesAt:sample.weekly.resetAt}}]}}}}}])}]})}<\/script>`}};
+</script><script src="../content.js"></script></body></html>

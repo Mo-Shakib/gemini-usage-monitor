@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Gemini Usage Monitor",
+  "version": "1.0.0",
+  "description": "A quiet, native-style usage summary on Gemini’s start page.",
+  "permissions": ["storage"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [{
+    "matches": ["https://gemini.google.com/*"],
+    "js": ["content.js"],
+    "css": ["styles.css"],
+    "run_at": "document_idle"
+  }]
+}

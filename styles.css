@@ -1,0 +1,52 @@
+#gemini-usage-monitor {
+  --gum-surface: var(--gem-sys-color-surface-container, #f0f4f9);
+  --gum-text: var(--gem-sys-color-on-surface, #1f1f1f);
+  --gum-muted: var(--gem-sys-color-on-surface-variant, #5f6368);
+  --gum-track: #dfe3eb;
+  --gum-accent: var(--gem-sys-color-primary, #0b57d0);
+  box-sizing: border-box;
+  color: var(--gum-text);
+  background: var(--gum-surface);
+  border-radius: 24px;
+  font-family: 'Google Sans Flex', 'Google Sans', 'Helvetica Neue', sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+  width: var(--gum-width, 100%);
+  max-width: none;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 20px 0 12px;
+  padding: 12px 20px 16px;
+  flex: 0 0 auto;
+}
+#gemini-usage-monitor[data-dark="true"] {
+  --gum-surface: var(--gem-sys-color-surface-container, #1e1f20);
+  --gum-text: var(--gem-sys-color-on-surface, #e3e3e3);
+  --gum-muted: var(--gem-sys-color-on-surface-variant, #aaaeb5);
+  --gum-track: #343537;
+  --gum-accent: var(--gem-sys-color-primary, #a8c7fa);
+}
+#gemini-usage-monitor * { box-sizing: border-box; }
+#gemini-usage-monitor [hidden] { display: none !important; }
+#gemini-usage-monitor .gum-header,
+#gemini-usage-monitor .gum-label { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+#gemini-usage-monitor .gum-header { margin-bottom: 9px; min-height: 28px; }
+#gemini-usage-monitor a { color: var(--gum-muted); text-decoration: none; font-size: 12px; }
+#gemini-usage-monitor a:hover { text-decoration: underline; }
+#gemini-usage-monitor .gum-refresh { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--gum-muted); font: 22px/1 Arial, sans-serif; cursor: pointer; }
+#gemini-usage-monitor .gum-refresh:hover { background: color-mix(in srgb, var(--gum-text) 8%, transparent); }
+#gemini-usage-monitor :focus-visible { outline: 2px solid var(--gum-accent); outline-offset: 3px; }
+#gemini-usage-monitor .gum-refresh:disabled { opacity: .4; cursor: default; }
+#gemini-usage-monitor .gum-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 28px; }
+#gemini-usage-monitor .gum-percent { font-variant-numeric: tabular-nums; }
+#gemini-usage-monitor progress { display: block; appearance: none; width: 100%; height: 5px; border: none; border-radius: 9px; overflow: hidden; background: var(--gum-track); margin: 8px 0; }
+#gemini-usage-monitor progress::-webkit-progress-bar { background: var(--gum-track); border-radius: 9px; }
+#gemini-usage-monitor progress::-webkit-progress-value { background: var(--gum-accent); border-radius: 9px; }
+#gemini-usage-monitor .gum-countdown { display: block; color: var(--gum-muted); font-size: 11px; }
+#gemini-usage-monitor .gum-countdown { margin-top: 2px; font-variant-numeric: tabular-nums; }
+#gemini-usage-monitor .gum-status { color: var(--gum-muted); font-size: 12px; }
+#gemini-usage-monitor .gum-grid:not([hidden]) + .gum-status { margin-top: 10px; }
+#gemini-usage-monitor[data-narrow="true"] { padding: 10px 16px 14px; margin-top: 14px; border-radius: 20px; }
+#gemini-usage-monitor[data-narrow="true"] .gum-grid { grid-template-columns: minmax(0,1fr); gap: 14px; }
